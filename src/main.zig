@@ -22,5 +22,5 @@ test "open test file and read one character" {
     const kvPair = next(file.reader()) catch |x| {
         return x;
     };
-           std.debug.print("Error reader init:  {s} {s} .\n", .{kvPair.key,kvPair.value});
+           std.debug.print("Error reader init:  {s}={s} \n", .{kvPair.key,kvPair.value});
 }
