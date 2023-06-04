@@ -7,7 +7,26 @@ const EnvReaderError = error {
     KeyStartedWithNumber,
     InvalidKeyCharacter,
 };
+  pub fn nextValue(  reader: Reader, pair: *EnvPair, ) !void {
 
+
+      while (true) {
+         const byte = reader.readByte() catch |err| switch (err) {
+             error.EndOfStream => break,
+             else => |e| return e,
+         };
+
+          pair.processValueNextValue(byte) catch |err| switch (err) {
+           error.InvalidKeyCharacter => break,
+           error.KeyStartedWithNumber => break,
+         };
+
+
+      }
+
+
+
+    }
 
       pub fn nextKey(  reader: Reader, pair: *EnvPair, ) !void {
 
