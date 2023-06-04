@@ -9,14 +9,9 @@ const EnvReaderError = error {
 };
 
 
-      pub fn next(  reader: Reader) !EnvPair {
+      pub fn nextKey(  reader: Reader, pair: *EnvPair, ) !void {
 
-      const key =  [_]u8{0} ** 32768;
-      const value =  [_]u8{0} ** 32768; //still learning. want to create a big buffer for max size
-        var pair = EnvPair {
-            .key=key,
-            .value = value
-        };
+
       while (true) {
          const byte = reader.readByte() catch |err| switch (err) {
              error.EndOfStream => break,
@@ -27,8 +22,11 @@ const EnvReaderError = error {
            error.KeyStartedWithNumber => break,
          };
                std.debug.print("Is Last? :  {any}   \n", .{isLastKeyValue});
+               if(isLastKeyValue){
+                break;
+               }
       }
-      return pair;
+
 
     }
 
