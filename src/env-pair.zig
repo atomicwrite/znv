@@ -1,5 +1,17 @@
 
-export const EnvPair = struct {
+
+pub const EnvPairError = error {
+    KeyStartedWithNumber,
+    InvalidKeyCharacter,
+};
+
+pub const EnvValueCounter = struct {
+
+ openBraces :u8 = 0,
+ closeBraces :u8 = 0,
+};
+
+pub const EnvPair = struct {
    const Self = @This();
     key: [32768] u8,
     keyIndex : u8 =0,
@@ -7,15 +19,16 @@ export const EnvPair = struct {
     valueIndex : u8 = 0,
     interpolation: bool = false,
 
-    fn placeKeyCharacter(self: *Self,value:u8) !void {
-        // todo: check for overflow
+    fn placeKeyCharacter(self: *Self,value:u8) void {
+        // todo: check for overflow and resize array.
         self.key[self.keyIndex] = value;
         self.keyIndex  =self.keyIndex+1;
     }
 
-    fn processKeyNextValue(self: *Self,value: u8) !bool {
+    pub fn processKeyNextValue(self: *Self,value: u8) !bool {
         if (value == '='){
           //we hit the end
+          //todo: shink arrays
           return true;
         }
         if(value == '_'){
@@ -24,7 +37,7 @@ export const EnvPair = struct {
         }
         if(value < 'A' )
         {
-            return error.InvalidKeyCharacter;
+            return EnvPairError.InvalidKeyCharacter;
         }
         if(value <= 'z'){
             self.placeKeyCharacter(value);
@@ -35,7 +48,7 @@ export const EnvPair = struct {
                 self.placeKeyCharacter(value);
                 return false;
             }
-            return error.KeyStartedWithNumber;
+            return EnvPairError.KeyStartedWithNumber;
         }
         return error.InvalidKeyCharacter;
     }

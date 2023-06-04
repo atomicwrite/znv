@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const EnvPair = @import("env-pair.zig").EnvPair;
-const EnvReader = @import("env-reader.zig").EnvReader;
+const next = @import("env-reader.zig").next;
 
 const testing = std.testing;
 
@@ -16,14 +16,11 @@ test "open test file and read one character" {
     const file =
         try std.fs.cwd().openFile("test-files/sample.env", . {});
     defer file.close() ;
-    var reader = EnvReader{
 
+
+
+    const kvPair = next(file.reader()) catch |x| {
+        return x;
     };
-    reader.init(file) catch |x| {
-          std.debug.print("Error reader init:  {} {} .\n", .{x});
-            //todo: handle these errors
-             return x;
-    };
-
-
+           std.debug.print("Error reader init:  {s} {s} .\n", .{kvPair.key,kvPair.value});
 }
