@@ -9,11 +9,11 @@ pub const EnvValueCounter = struct {
     openBraces: u8 = 0,
     openQuote: u8 = 0,
 
-    pub fn incrementInterpolDepth() void {
-        self.interPolDepth = interPolDepth + 1;
+    pub fn incrementInterpolDepth(self: *Self) void {
+        self.interPolDepth = self.interPolDepth + 1;
     }
-    pub fn decrementInterpolDepth() void {
-        self.interPolDepth = interPolDepth - 1;
+    pub fn decrementInterpolDepth(self: *Self) void {
+        self.interPolDepth = self.interPolDepth - 1;
     }
     // fn isInDoubleQuotesHereDoc(self:*Self) !bool{
     //
@@ -41,10 +41,10 @@ pub const EnvPair = struct {
     envValueCounter: EnvValueCounter = EnvValueCounter{},
     keyIndex: u8 = 0,
     value: *[32768]u8,
-    quoted = false,
-    tripleQuoted = false,
-    doubleQuoted = false,
-    tripleDoubleQuoted = false,
+    quoted: bool = false,
+    tripleQuoted: bool = false,
+    doubleQuoted: bool = false,
+    tripleDoubleQuoted: bool = false,
     valueIndex: u8 = 0,
     interpolation: bool = false,
 
@@ -78,54 +78,83 @@ pub const EnvPair = struct {
     pub fn isAtStart(self: *Self) u8 {
         return self.valueIndex == 0;
     }
-    pub fn previousIsDollarSign(self: *Self) !bool {
+    pub fn fourCharactersAgoStart(self: *Self) u8 {
+        return self.valueIndex == 3;
+    }
+    pub fn previousIsDollarSign(self: *Self) bool {
         if (self.valueIndex == 0) {
             return false;
         }
         return self.value[self.valueIndex - 1] == '$';
     }
     pub fn processValueNextValue(self: *Self, value: u8) !bool {
-        if (self.quoted) {
+        if (self.quoted) { // process value if we have detected this is a single quoted value
             return self.processValueInsideQuoted(value);
         }
 
-            if (value == '{') {
-                if (self.previousIsDollarSign()) {
-                    self.envValueCounter.incrementInterpolDepth();
-                }
+        if (value == '{') { //ok we have either no double quote or are double quoted, process if we find ${}
+            if (self.previousIsDollarSign()) {
+                self.envValueCounter.incrementInterpolDepth();
+                return false;
             }
-            if (value == '}') {
-                if (self.interPolDepth > 0) {
-                    self.envValueCounter.decrementInterpolDepth();
-                }
+        }
+        if (value == '}') {
+            if (self.envValueCounter.interPolDepth > 0) {
+                self.envValueCounter.decrementInterpolDepth();
+                return false;
             }
-            if (value == '"') {
-                const streak = self.previousDoubleQuoteCount();
-
-                if (streak == 0) {
-                    if (self.isAtStart()) {
-                        self.doubleQuoted = true;
-                    }
-                }
-                if (streak == 3) {
-                    if (self.isAtStart()) {
-                        self.tripleDoubleQuoted = true;
-                    }
-                    if (self.tripleDoubleQuoted) {
-                        if (self.fourCharactersAgoNewline()) {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-
-
+        }
+        if(value == '\''){
+            //todo: wrote a processSingleQuote similar to processDoubleQuote to handle end/start
+            return false;
+        }
+        // ok so it's not a single quoted string and not a quote
+        if (value != '"') {
+            //todo: check for escape (prob in placeValueCharacter)
+            self.placeValueCharacter(value);
+            return false;
+        }
+        // ok it's a double quote
+        return self.processDoubleQuote(value);
     }
-    pub fn processValueInsideQuoted() !bool{
-        if (value == '\'') {}
-            if (value == '\r') {}
-            if (value == '\n') {}
+    fn processDoubleQuote(self: *Self, value: u8) !bool {
+        const streak = self.previousDoubleQuoteCount();
+
+        if (streak == 0) {
+            if (self.isAtStart()) {
+                self.doubleQuoted = true;
+                return false;
+            }
+            if (!self.tripleDoubleQuoted) {
+                return true;
+            }
+        }
+        if (streak != 3) {
+            return false;
+        }
+        if (self.tripleDoubleQuoted) {
+            if (self.fourCharactersAgoNewline()) {
+                return true;
+            }
+            return false;
+        }
+        if (self.fourCharactersAgoStart()) {
+            self.tripleDoubleQuoted = true;
+            return false;
+        }
+    }
+    pub fn processValueInsideQuoted(self: *Self, value: u8) !bool {
+        if (value == '\'') {
+            return true;
+        }
+        if (value == '\r') {
+            return false;
+        }
+        if (value == '\n') {
+            return true;
+        }
+        self.placeValueCharacter(value);
+        return false;
     }
 
     pub fn processKeyNextValue(self: *Self, value: u8) !bool {
