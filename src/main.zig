@@ -27,7 +27,7 @@ test "open test file simple value" {
     const file =
         try std.fs.cwd().openFile("test-files/sample.env", .{});
     defer file.close();
-
+    //todo: use allocation. but this is ok for now.
     var key = [_]u8{0} ** 32768;
     var value = [_]u8{0} ** 32768; //still learning. want to create a big buffer for max size
 
