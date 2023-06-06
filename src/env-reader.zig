@@ -1,7 +1,8 @@
 const std = @import("std");
 
 const Reader = std.fs.File.Reader;
-const EnvPair = @import("env-pair.zig").EnvPair;
+const EnvKey = @import("env-key.zig").EnvKey;
+const EnvValue = @import("env-value.zig").EnvValue;
 
 const EnvReaderError = error{
     KeyStartedWithNumber,
@@ -9,7 +10,7 @@ const EnvReaderError = error{
 };
 pub fn nextValue(
     reader: Reader,
-    pair: *EnvPair,
+    value: *EnvValue,
 ) !void {
     var end = false;
 
@@ -19,7 +20,7 @@ pub fn nextValue(
             else => |e| return e,
         };
 
-        end = pair.processValueNextValue(byte) catch |err| switch (err) {
+        end = value.processValueNextValue(byte) catch |err| switch (err) {
             error.InvalidKeyCharacter => break,
             error.KeyStartedWithNumber => break,
         };
@@ -28,14 +29,14 @@ pub fn nextValue(
 
 pub fn nextKey(
     reader: Reader,
-    pair: *EnvPair,
+    key: *EnvKey,
 ) !void {
     while (true) {
         const byte = reader.readByte() catch |err| switch (err) {
             error.EndOfStream => break,
             else => |e| return e,
         };
-        const isLastKeyValue = pair.processKeyNextValue(byte) catch |err| switch (err) {
+        const isLastKeyValue = key.processKeyNextValue(byte) catch |err| switch (err) {
             error.InvalidKeyCharacter => break,
             error.KeyStartedWithNumber => break,
         };
