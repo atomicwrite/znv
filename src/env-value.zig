@@ -4,7 +4,7 @@ pub const MAX_ENV_VALUE_LENGTH = 32768;
 
 pub const EnvValue = struct {
     const Self = @This();
-    value: *[MAX_ENV_VALUE_LENGTH]u8,
+    value: *[MAX_ENV_VALUE_LENGTH]u8, //reuse stack buffer for speed
     quoted: bool = false,
     envValueCounter: EnvValueCounter = EnvValueCounter{},
     tripleQuoted: bool = false,
@@ -13,6 +13,13 @@ pub const EnvValue = struct {
     valueIndex: u8 = 0,
     interpolation: bool = false,
     didOverFlow : bool =false,
+
+    pub fn finalize_value(self: *Self,allocator: std.mem.Allocator) *[]u8 {
+           if(self.valueIndex <=0){
+            return error.ValueWouldBeEmpty;
+           }
+           self.value =  allocator.create([self.valueIndex]u8);
+    }
     fn placeValueCharacter(self: *Self, value: u8) void {
 
         if(self.valueIndex>=MAX_ENV_VALUE_LENGTH){
