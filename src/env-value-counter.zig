@@ -21,7 +21,7 @@ pub const EnvValueInterpolation  = struct {
     value:  ?*[]u8,
     /// find the envPair if it exists, otherwise error no such key
     /// if it isn't resolve, check to see if it is already resolving, if it is throw an error
-    // otherwise resolve it using existing resolved and place it in resolving until it's resolved
+    // otherwise resolve it using existing resolved or other pairs and place it in resolving until it's resolved
     ///
     pub fn resolve(envPairs: *[]EnvPair,resolved: *[]EnvValueInterpolation,resolving: *[]EnvValueInterpolation) !void{
             for(  envPairs) |pair| {
