@@ -1,8 +1,10 @@
+const std = @import("std");
 const EnvValueCounter = @import("env-value-counter.zig").EnvValueCounter;
+pub const MAX_ENV_VALUE_LENGTH = 32768;
 
 pub const EnvValue = struct {
     const Self = @This();
-    value: *[32768]u8,
+    value: *[MAX_ENV_VALUE_LENGTH]u8,
     quoted: bool = false,
     envValueCounter: EnvValueCounter = EnvValueCounter{},
     tripleQuoted: bool = false,
@@ -10,12 +12,25 @@ pub const EnvValue = struct {
     tripleDoubleQuoted: bool = false,
     valueIndex: u8 = 0,
     interpolation: bool = false,
+    didOverFlow : bool =false,
     fn placeValueCharacter(self: *Self, value: u8) void {
-        // todo: check for overflow and resize array.
+
+        if(self.valueIndex>=MAX_ENV_VALUE_LENGTH){
+            //emit warning we are over allowed buffer length
+            std.debug.print("Value {c} can not be stored. ENV has a max size. \n", .{value});
+            self.didOverFlow = true;
+            return;
+            //todo: handle overflow -- probably will just ignore. ENV can't hold more than 32k on linux.
+            //return;
+        }
         self.value[self.valueIndex] = value;
         self.valueIndex = self.valueIndex + 1;
     }
     pub fn processValueNextValue(self: *Self, value: u8) !bool {
+        if(self.didOverFlow){
+            //we've told the user they overflowed. Just return; Nothing else can be processed.
+            return;
+        }
         if (self.quoted) { // process value if we have detected this is a single quoted value
             return self.processValueInsideQuoted(value);
         }
@@ -74,8 +89,10 @@ pub const EnvValue = struct {
         return false;
     }
     pub fn processValueInsideQuoted(self: *Self, value: u8) !bool {
+        std.debug.print("Inside Single Quote {c} \n", .{value});
         if (value == '\'') {
             const streak = self.previousSingleQuoteCount();
+            std.debug.print("Is a single quote with streak {} \n", .{streak});
             if (streak == 3) {
                 if (self.fourCharactersAgoStart()) {
                     self.tripleQuoted = true;
@@ -119,6 +136,7 @@ pub const EnvValue = struct {
                 //avoid """"""""""""""""""""""""
                 break;
             }
+            tmp = tmp - 1;
         }
         return count;
     }
@@ -133,6 +151,7 @@ pub const EnvValue = struct {
                 //avoid """"""""""""""""""""""""
                 break;
             }
+            tmp = tmp - 1;
         }
         return count;
     }
