@@ -2,7 +2,7 @@ const std = @import("std");
 const EnvValueCounter = @import("env-value-counter.zig").EnvValueCounter;
 pub const MAX_ENV_VALUE_LENGTH = 32768;
 const EnvPair = @import("env-pair.zig").EnvPair;
-//test
+//test2
 pub const EnvValue = struct {
     const Self = @This();
     value: []u8 = undefined, //reuse stack buffer for speed
