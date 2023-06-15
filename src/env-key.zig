@@ -1,3 +1,4 @@
+const std = @import("std");
 pub const EnvKeyError = error{
     KeyStartedWithNumber,
     InvalidKeyCharacter,
@@ -5,8 +6,28 @@ pub const EnvKeyError = error{
 
 pub const EnvKey = struct {
     const Self = @This();
-    key: *[32768]u8,
+    key: []u8 = undefined,
     keyIndex: u8 = 0,
+    allocator: std.mem.Allocator = undefined,
+
+    pub fn init(self: *Self, allocator: std.mem.Allocator, tmp_buffer: []u8) !void {
+
+        self.key = tmp_buffer;
+        self.allocator = allocator;
+    }
+      pub fn free_key(self: *Self)  void {
+                self.allocator.free(self.key);
+            }
+    pub fn finalize_key(self: *Self ) !void {
+        if (self.keyIndex <= 0) {
+            return error.ValueWouldBeEmpty;
+        }
+        var tmp =try self.allocator.alloc(u8,self.keyIndex);
+        const bufferSlice = self.key[0..self.keyIndex];
+        std.mem.copy(u8, tmp, bufferSlice);
+        self.key = tmp;
+
+    }
     fn placeKeyCharacter(self: *Self, value: u8) void {
         // todo: check for overflow and resize array.
         self.key[self.keyIndex] = value;

@@ -17,14 +17,16 @@ pub fn nextValue(
     while (!end) {
         const byte = reader.readByte() catch |err| switch (err) {
             error.EndOfStream => break,
+            error.Unexpected=>{
+                std.debug.print("unexpected error: {any}",.{err});
+                break;
+            },
             else => |e| return e,
         };
 
-        end = value.processValueNextValue(byte) catch |err| switch (err) {
-            error.InvalidKeyCharacter => break,
-            error.KeyStartedWithNumber => break,
-        };
+        end =try value.processValueNextValue(byte) ;
     }
+    std.debug.print("End of Value \n", .{ });
 }
 
 pub fn nextKey(
@@ -39,6 +41,7 @@ pub fn nextKey(
         const isLastKeyValue = key.processKeyNextValue(byte) catch |err| switch (err) {
             error.InvalidKeyCharacter => break,
             error.KeyStartedWithNumber => break,
+
         };
         std.debug.print("Is Last? :  {any}   \n", .{isLastKeyValue});
         if (isLastKeyValue) {
