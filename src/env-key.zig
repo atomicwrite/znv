@@ -22,7 +22,9 @@ pub const EnvKey = struct {
         if (self.keyIndex <= 0) {
             return error.ValueWouldBeEmpty;
         }
+        std.debug.print("Finalizing Key of length {} \n", .{self.keyIndex});
         var tmp =try self.allocator.alloc(u8,self.keyIndex);
+
         const bufferSlice = self.key[0..self.keyIndex];
         std.mem.copy(u8, tmp, bufferSlice);
         self.key = tmp;

@@ -3,6 +3,7 @@ const EnvValueCounter = @import("env-value-counter.zig").EnvValueCounter;
 pub const MAX_ENV_VALUE_LENGTH = 32768;
 const EnvPair = @import("env-pair.zig").EnvPair;
 //test3
+
 pub const EnvValue = struct {
     const Self = @This();
     value: []u8 = undefined, //reuse stack buffer for speed
@@ -27,7 +28,7 @@ pub const EnvValue = struct {
         self.allocator.free(self.value);
     }
     pub fn init(self: *Self, allocator: std.mem.Allocator, tmp_buffer: []u8) !void {
-        std.debug.print("creating array   \n",.{ });
+        std.debug.print("creating intOp array   \n",.{ });
         var tmp = try allocator.alloc(u8, 10);
         self.interpolations = tmp;
         self.value = tmp_buffer;
@@ -44,24 +45,25 @@ pub const EnvValue = struct {
         if (self.valueIndex <= 0) {
             return error.ValueWouldBeEmpty;
         }
+        std.debug.print("Finalizing Value of length {} \n", .{self.valueIndex});
         var tmp = try self.allocator.alloc(u8, self.valueIndex);
         const bufferSlice = self.value[0..self.valueIndex];
         std.mem.copy(u8, tmp, bufferSlice);
         self.value = tmp;
     }
-    fn get_size_for_interpolation(self: *Self, pairs: []EnvPair) u8 {
+    fn get_size_for_interpolation(self: *Self, pairs: []EnvPair) i8 {
         var tmp = self.interpolationIndex;
         if (tmp % 2 != 0) {
             //someone didn't close their last {}
             std.debug.print("Unclosed interpolation {}",.{tmp});
             tmp = tmp - 1;
         }
-        std.debug.print("We have  {} variables in this string",.{tmp/2});
-        var resizeNeeded: u8 = 0;
+        std.debug.print("We have  {} variables in this string\n",.{tmp/2});
+        var resizeNeeded: i8 = 0;
         while (tmp > 0) : (tmp = tmp - 2) {
             const start = self.interpolations[tmp - 2];
             const end = self.interpolations[tmp - 1];
-            const length = end - start;
+            const length : i8= @intCast(i8,end - start);
             std.debug.print("Pol {} start : {} end: {} length {}   \n",.{tmp,start,end,length });
             const targetKey = self.value[start..end];
             std.debug.print("looking for {s}\n",.{targetKey});
@@ -69,13 +71,15 @@ pub const EnvValue = struct {
                 std.debug.print("looking at {s}    \n",.{pair.key.key });
                 if (std.mem.eql(u8, pair.key.key, targetKey)) {
                     //this is the one
-                    std.debug.print("found {s}    \n",.{targetKey });
-                    const pairValueLen = @intCast(u8, pair.value.value.len);
+                    const pairValueLen = @intCast(i8, pair.value.value.len);
+                    std.debug.print("found {s}  at {} with length {} to replace old length {} \n",.{targetKey,pair.value.value.len,pairValueLen ,length});
+
                     if (pair.value.value.len > length) {
-                        resizeNeeded += pairValueLen - length;
+                        resizeNeeded += @intCast(i8,pairValueLen - length);
                     } else if (pair.value.value.len < length) {
-                        resizeNeeded -= pairValueLen - length;
+                        resizeNeeded -=  @intCast(i8,pairValueLen - length);
                     }
+                    std.debug.print("Current Diff in string size {}    \n",.{resizeNeeded });
                 }
             }
         }
@@ -94,11 +98,12 @@ pub const EnvValue = struct {
         }
         //get the difference in interpolation size and current size
         const resizeNeeded = self.get_size_for_interpolation(pairs);
+        std.debug.print("Need to resize buffer {} for value size change    \n",.{resizeNeeded});
         if (resizeNeeded == 0) {
             //weird edge case for later, otherwise we'll optimize for the normal cases where the size is either smaller or larger
         }
         //create a tmp amount for the exact size
-        var tmp = try self.allocator.alloc(u8, self.valueIndex + resizeNeeded);
+        var tmp = try self.allocator.alloc(u8,  @intCast(usize,@intCast(i8,self.valueIndex) + resizeNeeded));
 
         try self.copy_interpolation_values(tmp, pairs);
     }

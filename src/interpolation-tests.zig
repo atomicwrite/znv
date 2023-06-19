@@ -15,9 +15,9 @@ test "int value" {
     defer file.close();
     //   //todo: use allocation. but this is ok for now.
     //
-    var key = try allocator.alloc(u8, 32768); //buffer for repeat reads
+    var key = try allocator.alloc(u8, 100); //buffer for repeat reads
     defer allocator.free(key);
-    var value = try allocator.alloc(u8, 32768); //buffer for repeat reads
+    var value = try allocator.alloc(u8, 100); //buffer for repeat reads
     defer allocator.free(value);
     var envKey1 = EnvKey{};
     try envKey1.init(allocator, key);
@@ -25,40 +25,44 @@ test "int value" {
     try envValue1.init(allocator, value);
     defer envValue1.free_interpolation_array();
     //
-    var envPair1 = EnvPair{ .key = &envKey1, .value = &envValue1 };
+    const envPair1 = EnvPair{ .key = &envKey1, .value = &envValue1 };
     std.debug.print("Reading key  \n", .{});
     try nextKey(file.reader(), &envKey1);
-    std.debug.print("Read Value  \n", .{});
+    std.debug.print("Reading Value  \n", .{});
     try nextValue(file.reader(), &envValue1);
     std.debug.print("Read   \n", .{});
     try envKey1.finalize_key();
+
     defer envKey1.free_key();
     try envValue1.finalize_value();
+    std.debug.print("Read key {s} \n", .{envKey1.key});
+    std.debug.print("Read Value {s} \n", .{envValue1.value});
     defer envValue1.free_value();
 
     var envKey2 = EnvKey{};
-        try envKey2.init(allocator, key);
-        var envValue2 = EnvValue{};
-        try envValue2.init(allocator, value);
-        defer envValue2.free_interpolation_array();
-        //
-        //var envPair1 = EnvPair{ .key = &envKey2, .value = &envValue2 };
-        std.debug.print("Reading key  \n", .{});
-        try nextKey(file.reader(), &envKey2);
-        std.debug.print("Read Value  \n", .{});
-        try nextValue(file.reader(), &envValue2);
-        std.debug.print("Read   \n", .{});
-        try envKey2.finalize_key();
-        defer envKey2.free_key();
-        try envValue2.finalize_value();
-        defer envValue2.free_value();
-    
-    
-    
-       var items :  []EnvPair = try allocator.alloc(EnvPair,1);
-       items[0] = envPair1;
-       defer allocator.free(items);
-       try envValue2.interpolate_value( items);
+    try envKey2.init(allocator, key);
+    var envValue2 = EnvValue{};
+    try envValue2.init(allocator, value);
+    defer envValue2.free_interpolation_array();
+    //
+    const envPair2 = EnvPair{ .key = &envKey2, .value = &envValue2 };
+    std.debug.print("Reading key  \n", .{});
+    try nextKey(file.reader(), &envKey2);
+
+    try nextValue(file.reader(), &envValue2);
+    std.debug.print("Read   \n", .{});
+    try envKey2.finalize_key();
+    defer envKey2.free_key();
+    try envValue2.finalize_value();
+    defer envValue2.free_value();
+    std.debug.print("Read key {s} \n", .{envKey2.key});
+    std.debug.print("Read Value {s} \n", .{envValue2.value});
+
+    const items: []EnvPair = try allocator.alloc(EnvPair, 2);
+    items[0] = envPair2;
+    items[1] = envPair1;
+    defer allocator.free(items);
+    try envValue2.interpolate_value(items);
     //   std.debug.print("Output:  {s}={s} \n", .{ envKey2.key.*, envValue2.value.* });
     //   try std.testing.expect(std.mem.eql(u8, envValue2.value.*[0..4], "beta"));
 }
