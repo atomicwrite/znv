@@ -8,10 +8,10 @@ pub const EnvKey = struct {
     const Self = @This();
     key: []u8 = undefined,
     keyIndex: u8 = 0,
-    allocator: std.mem.Allocator = undefined,
+    allocator: *std.mem.Allocator = undefined,
 
-    pub fn init(self: *Self, allocator: std.mem.Allocator, tmp_buffer: []u8) !void {
-
+    pub fn init(self: *Self, allocator: *std.mem.Allocator, tmp_buffer: []u8) !void {
+        self.keyIndex = 0;
         self.key = tmp_buffer;
         self.allocator = allocator;
     }
@@ -32,6 +32,7 @@ pub const EnvKey = struct {
     }
     fn placeKeyCharacter(self: *Self, value: u8) void {
         // todo: check for overflow and resize array.
+        std.debug.print("Placing {c} at {}\n", .{value,self.keyIndex});
         self.key[self.keyIndex] = value;
         self.keyIndex = self.keyIndex + 1;
     }

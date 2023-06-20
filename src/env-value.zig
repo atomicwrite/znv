@@ -1,5 +1,4 @@
 const std = @import("std");
-const EnvValueCounter = @import("env-value-counter.zig").EnvValueCounter;
 pub const MAX_ENV_VALUE_LENGTH = 32768;
 const EnvPair = @import("env-pair.zig").EnvPair;
 const VariablePosition = @import("variable-position.zig").VariablePosition;
@@ -15,21 +14,21 @@ pub const EnvValue = struct {
     interpolations: []VariablePosition = undefined,
     interpolationIndex: u8 = 0,
     quoted: bool = false,
-    envValueCounter: EnvValueCounter = EnvValueCounter{},
     tripleQuoted: bool = false,
     doubleQuoted: bool = false,
     tripleDoubleQuoted: bool = false,
     valueIndex: u8 = 0,
-    allocator: std.mem.Allocator = undefined,
-
+    allocator: *std.mem.Allocator = undefined,
     didOverFlow: bool = false,
 
     pub fn free_value(self: *Self) void {
         self.allocator.free(self.value);
     }
-    pub fn init(self: *Self, allocator: std.mem.Allocator, tmp_buffer: []u8) !void {
+    pub fn init(self: *Self, allocator: *std.mem.Allocator, tmp_buffer: []u8) !void {
         std.debug.print("creating intOp array   \n",.{ });
-        var tmp = try allocator.alloc(VariablePosition, 10);
+        self.valueIndex = 0;
+        self.interpolationIndex = 0;
+        var tmp = try allocator.alloc(VariablePosition, 8);
         self.interpolations = tmp;
         self.value = tmp_buffer;
         self.allocator = allocator;

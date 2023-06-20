@@ -9,10 +9,10 @@ const free_interpolation_array = InterpolationHelper.free_interpolation_array;
 const interpolate_value = InterpolationHelper.interpolate_value;
 const testing = std.testing;
 
-test "int value" {
+test "read two pairs and interpolate one" {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
-    var allocator = arena.allocator(); // prob best with arena but for tests...
+    var allocator = &arena.allocator(); // prob best with arena but for tests...
     const file =
         try std.fs.cwd().openFile("test-files/sample-interpolated.env", .{});
     defer file.close();
@@ -69,3 +69,4 @@ test "int value" {
     //   std.debug.print("Output:  {s}={s} \n", .{ envKey2.key.*, envValue2.value.* });
     //   try std.testing.expect(std.mem.eql(u8, envValue2.value.*[0..4], "beta"));
 }
+
