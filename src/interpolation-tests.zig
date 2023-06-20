@@ -4,6 +4,9 @@ const EnvKey = @import("env-key.zig").EnvKey;
 const nextKey = @import("env-reader.zig").nextKey;
 const nextValue = @import("env-reader.zig").nextValue;
 const EnvPair = @import("env-pair.zig").EnvPair;
+const InterpolationHelper = @import("interpolation-helper.zig");
+const free_interpolation_array = InterpolationHelper.free_interpolation_array;
+const interpolate_value = InterpolationHelper.interpolate_value;
 const testing = std.testing;
 
 test "int value" {
@@ -23,7 +26,7 @@ test "int value" {
     try envKey1.init(allocator, key);
     var envValue1 = EnvValue{};
     try envValue1.init(allocator, value);
-    defer envValue1.free_interpolation_array();
+    defer free_interpolation_array(&envValue1);
     //
     const envPair1 = EnvPair{ .key = &envKey1, .value = &envValue1 };
     std.debug.print("Reading key  \n", .{});
@@ -43,7 +46,7 @@ test "int value" {
     try envKey2.init(allocator, key);
     var envValue2 = EnvValue{};
     try envValue2.init(allocator, value);
-    defer envValue2.free_interpolation_array();
+    defer free_interpolation_array(&envValue2);
     //
     const envPair2 = EnvPair{ .key = &envKey2, .value = &envValue2 };
     std.debug.print("Reading key  \n", .{});
@@ -62,7 +65,7 @@ test "int value" {
     items[0] = envPair2;
     items[1] = envPair1;
     defer allocator.free(items);
-    try envValue2.interpolate_value(items);
+    try interpolate_value(&envValue2,items);
     //   std.debug.print("Output:  {s}={s} \n", .{ envKey2.key.*, envValue2.value.* });
     //   try std.testing.expect(std.mem.eql(u8, envValue2.value.*[0..4], "beta"));
 }
