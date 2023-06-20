@@ -17,21 +17,18 @@ pub fn resizeInterpolationArray(self: *EnvValue) !void {
 }
 fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
     var tmp = self.interpolationIndex;
-    if (tmp % 2 != 0) {
-        //someone didn't close their last {}
-        std.debug.print("Unclosed interpolation {}", .{tmp});
-        tmp = tmp - 1;
-    }
-    std.debug.print("We have  {} variables in this string\n", .{tmp / 2});
+
+    std.debug.print("We have {} variables\n", .{tmp});
     var resizeNeeded: i8 = 0;
-    while (tmp > 0) : (tmp = tmp - 2) {
-        const item = self.interpolations[tmp];
+    while (tmp > 0) : (tmp = tmp - 1) {
+        const item = self.interpolations[tmp - 1];
         const start = item.variableStart;
         const end = item.variableEnd;
 
         const length: i8 = @intCast(i8, item.endBrace - item.dollarSign);
-        std.debug.print("Pol {} start : {} end: {} length {}   \n", .{ tmp, start, end, length });
-        const targetKey = self.value[start..end];
+        const variableLength = end - start;
+        std.debug.print("Pol {} start : {} end: {} length {} , variable name length {}  \n", .{ tmp, start, end, length, variableLength });
+        const targetKey = self.value[start .. end];
         std.debug.print("looking for {s}\n", .{targetKey});
         for (pairs) |pair| {
             std.debug.print("looking at {s}    \n", .{pair.key.key});
@@ -53,17 +50,13 @@ fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
     return resizeNeeded; //return it because for smaller you resize after
 }
 pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
-    if (self.interpolationIndex < 2) {
+    if (self.interpolationIndex < 1) {
         //it had none or one with a hanging chad
         return;
     }
 
-    if (self.interpolationIndex % 2 != 0) {
-        //fix hanging chad but it has other good ones
-        self.interpolationIndex -= 1;
-    }
     //get the difference in interpolation size and current size
-    const resizeNeeded = get_size_for_interpolation(self,pairs);
+    const resizeNeeded = get_size_for_interpolation(self, pairs);
     std.debug.print("Need to resize buffer {} for value size change    \n", .{resizeNeeded});
     if (resizeNeeded == 0) {
         //weird edge case for later, otherwise we'll optimize for the normal cases where the size is either smaller or larger
@@ -71,15 +64,15 @@ pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
     //create a tmp amount for the exact size
     var tmp = try self.allocator.alloc(u8, @intCast(usize, @intCast(i8, self.valueIndex) + resizeNeeded));
 
-    try copy_interpolation_values(self,tmp, pairs);
+    try copy_interpolation_values(self, tmp, pairs);
 }
 fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair) !void {
-    var tmp = self.interpolationIndex - 1;
+    var tmp = self.interpolationIndex ;
     var copy_index: u8 = 0;
     var buffer_index: u8 = 0;
 
-    while (tmp >= 0) : (tmp = tmp - 2) {
-        const item = self.interpolations[tmp];
+    while (tmp > 0) : (tmp = tmp - 1) {
+        const item = self.interpolations[tmp - 1];
         const start = item.variableStart;
         const end = item.variableEnd;
         //catch up the new buffer to where we are about to interpol
@@ -125,7 +118,8 @@ pub fn incrementInterpolDepth(self: *EnvValue, count: u8) !void {
 pub fn decrementInterpolDepth(self: *EnvValue) void {
     self.isParsingVariable = false;
     std.debug.print("interpolation ends at {} :{}\n", .{ self.valueIndex, self.interpolationIndex });
-    self.interpolations[self.interpolationIndex].endBrace = self.valueIndex;
+    self.interpolations[self.interpolationIndex].endBrace = self.valueIndex + 1;
+    self.interpolations[self.interpolationIndex].variableEnd = self.valueIndex;
 
     self.interpolationIndex = self.interpolationIndex + 1;
     //todo: clean whitespace out of variable start and end so we can do $ { varName }

@@ -65,7 +65,7 @@ test "int value" {
     items[0] = envPair2;
     items[1] = envPair1;
     defer allocator.free(items);
-    try interpolate_value(&envValue2,items);
+    try interpolate_value(&envValue2, items);
     //   std.debug.print("Output:  {s}={s} \n", .{ envKey2.key.*, envValue2.value.* });
     //   try std.testing.expect(std.mem.eql(u8, envValue2.value.*[0..4], "beta"));
 }
