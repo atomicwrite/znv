@@ -35,6 +35,25 @@ fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
         for (pairs) |pair| {
             std.debug.print("looking at {s}    \n", .{pair.key.key});
             if (std.mem.eql(u8, pair.key.key, targetKey)) {
+                if(pair.value.hadInterpolation())
+                    {
+                        std.debug.print("Env pair had interpolation {s} \n", .{ pair.key.key });
+                        if(!pair.value.isAlreadyInterpolated)
+                        {
+                            std.debug.print("Env pair is not yet processed {s} \n", .{ pair.value.value });
+                            if(!pair.value.isBeingInterpolated){
+                            std.debug.print("Env pair is not circular {s} \n", .{ pair.value.value });
+                             interpolate_value(pair.value, pairs) catch |x|  {
+                               std.debug.print("err {}", .{x});
+                                continue;
+                             };
+                             std.debug.print("Env pair was interpolated {s} \n", .{ pair.value.value });
+                             }else{
+                                std.debug.print("Env pair is circular {s} \n", .{ pair.key.key });
+                                //todo: error mode allows to raise error or silently ignore that we had circular
+                             }
+                        }
+                    }
                 //this is the one
                 const pairValueLen = @intCast(i8, pair.value.value.len);
                 std.debug.print("found {s}  at {} with length {} to replace old length {} \n", .{ targetKey, pair.value.value.len, pairValueLen, length });
@@ -54,23 +73,26 @@ fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
     return resizeNeeded; //return it because for smaller you resize after
 }
 pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
-    if (self.interpolationIndex < 1) {
-        //it had none or one with a hanging chad
+    if (!self.hadInterpolation()) {
         return;
     }
-
+    if(self.isAlreadyInterpolated){
+        return;
+    }
+      std.debug.print("----------------------  \n", .{});
+    self.isBeingInterpolated = true;
     //get the difference in interpolation size and current size
     const resizeNeeded = get_size_for_interpolation(self, pairs);
     std.debug.print("Need to resize buffer {} for value size change    \n", .{resizeNeeded});
-    if (resizeNeeded == 0) {
-        //weird edge case for later, otherwise we'll optimize for the normal cases where the size is either smaller or larger
-    }
     //create a tmp amount for the exact size
     const new_size = @intCast(i8, self.valueIndex) + resizeNeeded;
     std.debug.print("Creating {} sized buffer  \n", .{new_size});
     var tmp = try self.allocator.alloc(u8, @intCast(usize, new_size));
 
     try copy_interpolation_values(self, tmp, pairs);
+    self.value = tmp;
+    self.isAlreadyInterpolated = true;
+    self.isBeingInterpolated = false;
 }
 fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair) !void {
     var tmp: u8 = 0;
@@ -94,6 +116,8 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
             }, //todo: catch up buffer_start (we'll fix this in a test csae)
             else => |e| return e,
         };
+    
+        std.debug.print("Copying in value {s}\n", .{ envpair.value.value });
         const value_len = @intCast(u8, envpair.value.value.len);
         const copy_end: u8 = copy_index + value_len;
         std.debug.print("Copying after variable {}->{}\n", .{ copy_end, copy_index });
@@ -120,6 +144,7 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
     }
 
     std.debug.print("new value: {s}\n", .{new_buffer});
+
 }
 pub fn copyJustText(self: *EnvValue, new_buffer: []u8, copy_index: u8, buffer_index: u8, amount: u8) void {
     const copy_end = copy_index + amount;

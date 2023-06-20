@@ -19,7 +19,9 @@ pub const EnvValue = struct {
     tripleDoubleQuoted: bool = false,
     valueIndex: u8 = 0,
     allocator: *std.mem.Allocator = undefined,
-    didOverFlow: bool = false,
+    isAlreadyInterpolated : bool = false,
+    isBeingInterpolated : bool = false,
+    didOverFlow :bool = false,
 
     pub fn free_value(self: *Self) void {
         self.allocator.free(self.value);
@@ -32,7 +34,19 @@ pub const EnvValue = struct {
         self.interpolations = tmp;
         self.value = tmp_buffer;
         self.allocator = allocator;
+        self.isAlreadyInterpolated= false;
+        self.tripleQuoted = false;
+        self.didOverFlow = false;
+        self.doubleQuoted = false;
+        self.quoted= false;
+        self.isBeingInterpolated = false;
     }
+
+    pub fn hadInterpolation(self: *Self) bool {
+        return self.interpolationIndex  > 0;
+    }
+
+
 
     pub fn finalize_value(self: *Self) !void {
         if (self.valueIndex <= 0) {
