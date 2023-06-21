@@ -3,6 +3,7 @@ pub const MAX_ENV_VALUE_LENGTH = 32768;
 const EnvPair = @import("env-pair.zig").EnvPair;
 const VariablePosition = @import("variable-position.zig").VariablePosition;
 const InterpolationHelper = @import("interpolation-helper.zig");
+const processValueInsideQuoted = @import("quote-helper.zig").processValueInsideQuoted;
 const incrementInterpolDepth= InterpolationHelper.incrementInterpolDepth;
 const decrementInterpolDepth= InterpolationHelper.decrementInterpolDepth;
 
@@ -23,7 +24,7 @@ pub const EnvValue = struct {
     isBeingInterpolated : bool = false,
     didOverFlow :bool = false,
 
-    pub fn free_value(self: *Self) void {
+    pub fn free_value(self: *EnvValue) void {
         self.allocator.free(self.value);
     }
     pub fn init(self: *Self, allocator: *std.mem.Allocator, tmp_buffer: []u8) !void {
@@ -60,7 +61,7 @@ pub const EnvValue = struct {
     }
 
 
-    fn placeValueCharacter(self: *Self, value: u8) !void {
+   pub fn placeValueCharacter(self: *Self, value: u8) !void {
         if (self.valueIndex >= MAX_ENV_VALUE_LENGTH) {
             //emit warning we are over allowed buffer length
             std.debug.print("Value {c} can not be stored. ENV has a max size. \n", .{value});
@@ -81,7 +82,7 @@ pub const EnvValue = struct {
             return true;
         }
         if (self.quoted) { // process value if we have detected this is a single quoted value
-            return self.processValueInsideQuoted(value);
+            return processValueInsideQuoted(self,value);
         }
         if (value == '\'') { //single quote
             if (self.isAtStart()) { //at the start
@@ -89,22 +90,42 @@ pub const EnvValue = struct {
                 return false;
             }
         }
-        // if (self.processDoubleQuote()) {
-        //     return true;
-        // }
-        if (value == '\n') {
-              std.debug.print("Newline hit on double/no quote\n", .{});
-            // if (!self.tripleDoubleQuoted) {
-            //     return true;
-            // }
-            // if (!self.tripleQuoted) {
-            //     return true;
-            // }
 
+        if (value == '\n') {
+            std.debug.print("Newline hit on double/no quote\n", .{});
             return true;
         }
         if (value == '\r') {
             return false;
+        }
+        switch(value) {
+            't'=>{
+
+            },
+            'n'=>{
+
+            },
+            'r'=>{
+
+            },
+            'f'=>{
+
+            },
+            'b'=>{
+
+            },
+            '"'=>{
+
+            },
+            '\''=>{
+
+            },
+            'u'=>{
+
+            },
+            else =>{
+
+            }
         }
 
 
@@ -127,63 +148,6 @@ pub const EnvValue = struct {
     }
 
 
-    fn processDoubleQuote(self: *Self) bool {
-        const streak = self.previousDoubleQuoteCount();
-
-        if (streak == 0) {
-            if (self.isAtStart()) {
-                self.doubleQuoted = true;
-                return false;
-            }
-            if (!self.tripleDoubleQuoted) {
-                return false;
-            }
-        }
-        if (streak != 3) {
-            return false;
-        }
-        if (self.tripleDoubleQuoted) {
-            if (self.fourCharactersAgoNewline()) {
-                return true;
-            }
-            return false;
-        }
-        if (self.fourCharactersAgoStart()) {
-            self.tripleDoubleQuoted = true;
-        }
-        return false;
-    }
-    pub fn processValueInsideQuoted(self: *Self, value: u8) !bool {
-        std.debug.print("Inside Single Quote {c} \n", .{value});
-        if (value == '\'') {
-            const streak = self.previousSingleQuoteCount();
-            std.debug.print("Is a single quote with streak {} \n", .{streak});
-            if (streak == 3) {
-                if (self.fourCharactersAgoStart()) {
-                    self.tripleQuoted = true;
-                    return false;
-                }
-                if (self.fourCharactersAgoNewline()) {
-                    return true;
-                }
-            }
-            return true;
-        }
-        if (value == '\r') {
-            return false;
-        }
-        if (value == '\n') {
-            return true;
-        }
-        try self.placeValueCharacter(value);
-        return false;
-    }
-    pub fn previousIsSingleQuote(self: *Self) !bool {
-        if (self.valueIndex == 0) {
-            return false;
-        }
-        return self.value[self.valueIndex - 1] == '\'';
-    }
     pub fn fourCharactersAgoNewline(self: *Self) bool {
         if (self.valueIndex < 4) {
             return false;

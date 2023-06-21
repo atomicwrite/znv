@@ -15,6 +15,26 @@ pub fn resizeInterpolationArray(self: *EnvValue) !void {
     self.allocator.free(self.interpolations);
     self.interpolations = tmp;
 }
+fn check_if_pair_needs_interpolation( pairs: []EnvPair, pair: *const EnvPair) !void {
+    if (!pair.value.hadInterpolation()) {
+        return;
+    }
+    std.debug.print("Env pair had interpolation {s} \n", .{pair.key.key});
+    if (pair.value.isAlreadyInterpolated) {
+        return;
+    }
+    std.debug.print("Env pair is not yet processed {s} \n", .{pair.value.value});
+    if (pair.value.isBeingInterpolated) {
+        std.debug.print("Env pair is circular {s} \n", .{pair.key.key});
+        return;
+    }
+    std.debug.print("Env pair is not circular {s} \n", .{pair.value.value});
+    try interpolate_value(pair.value, pairs);
+    std.debug.print("Env pair was interpolated {s} \n", .{pair.value.value});
+
+    //todo: error mode allows to raise error or silently ignore that we had circular
+
+}
 fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
     var tmp: u8 = self.interpolationIndex;
 
@@ -34,39 +54,25 @@ fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
         std.debug.print("looking for {s}\n", .{targetKey});
         for (pairs) |pair| {
             std.debug.print("looking at {s}    \n", .{pair.key.key});
-            if (std.mem.eql(u8, pair.key.key, targetKey)) {
-                if(pair.value.hadInterpolation())
-                    {
-                        std.debug.print("Env pair had interpolation {s} \n", .{ pair.key.key });
-                        if(!pair.value.isAlreadyInterpolated)
-                        {
-                            std.debug.print("Env pair is not yet processed {s} \n", .{ pair.value.value });
-                            if(!pair.value.isBeingInterpolated){
-                            std.debug.print("Env pair is not circular {s} \n", .{ pair.value.value });
-                             interpolate_value(pair.value, pairs) catch |x|  {
-                               std.debug.print("err {}", .{x});
-                                continue;
-                             };
-                             std.debug.print("Env pair was interpolated {s} \n", .{ pair.value.value });
-                             }else{
-                                std.debug.print("Env pair is circular {s} \n", .{ pair.key.key });
-                                //todo: error mode allows to raise error or silently ignore that we had circular
-                             }
-                        }
-                    }
-                //this is the one
-                const pairValueLen = @intCast(i8, pair.value.value.len);
-                std.debug.print("found {s}  at {} with length {} to replace old length {} \n", .{ targetKey, pair.value.value.len, pairValueLen, length });
-
-                if (length > pairValueLen) {
-                    resizeNeeded += pairValueLen - length;
-                    std.debug.print("Value is less than variable name : {} \n", .{pairValueLen - length});
-                } else if (length < pairValueLen) {
-                    std.debug.print("Value is greater than variable name : {} \n", .{pairValueLen + length});
-                    resizeNeeded -= pairValueLen + length;
-                }
-                std.debug.print("Current Diff in string size {}    \n", .{resizeNeeded});
+            if (!std.mem.eql(u8, pair.key.key, targetKey)) {
+                continue;
             }
+            check_if_pair_needs_interpolation(pairs, &pair) catch |x| {
+                std.debug.print("err {}", .{x});
+                continue;
+            };
+            //this is the one
+            const pairValueLen = @intCast(i8, pair.value.value.len);
+            std.debug.print("found {s}  at {} with length {} to replace old length {} \n", .{ targetKey, pair.value.value.len, pairValueLen, length });
+
+            if (length > pairValueLen) {
+                resizeNeeded += pairValueLen - length;
+                std.debug.print("Value is less than variable name : {} \n", .{pairValueLen - length});
+            } else if (length < pairValueLen) {
+                std.debug.print("Value is greater than variable name : {} \n", .{pairValueLen + length});
+                resizeNeeded -= pairValueLen + length;
+            }
+            std.debug.print("Current Diff in string size {}    \n", .{resizeNeeded});
         }
     }
 
@@ -76,10 +82,10 @@ pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
     if (!self.hadInterpolation()) {
         return;
     }
-    if(self.isAlreadyInterpolated){
+    if (self.isAlreadyInterpolated) {
         return;
     }
-      std.debug.print("----------------------  \n", .{});
+    std.debug.print("----------------------  \n", .{});
     self.isBeingInterpolated = true;
     //get the difference in interpolation size and current size
     const resizeNeeded = get_size_for_interpolation(self, pairs);
@@ -116,8 +122,8 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
             }, //todo: catch up buffer_start (we'll fix this in a test csae)
             else => |e| return e,
         };
-    
-        std.debug.print("Copying in value {s}\n", .{ envpair.value.value });
+
+        std.debug.print("Copying in value {s}\n", .{envpair.value.value});
         const value_len = @intCast(u8, envpair.value.value.len);
         const copy_end: u8 = copy_index + value_len;
         std.debug.print("Copying after variable {}->{}\n", .{ copy_end, copy_index });
@@ -129,14 +135,13 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
         var amount: u8 = 0;
         //do we have another variable or is this the last?
         if (tmp < self.interpolationIndex - 1) {
-
-            amount = self.interpolations[tmp+1].dollarSign - buffer_index;
-            std.debug.print("Copying {} to next variable \n", .{ amount });
+            amount = self.interpolations[tmp + 1].dollarSign - buffer_index;
+            std.debug.print("Copying {} to next variable \n", .{amount});
         } else {
             amount = @intCast(u8, self.value.len) - buffer_index;
-            std.debug.print("Copying {} to end \n", .{ amount });
+            std.debug.print("Copying {} to end \n", .{amount});
         }
-        if(amount > 0){
+        if (amount > 0) {
             copyJustText(self, new_buffer, copy_index, buffer_index, amount);
             buffer_index = buffer_index + amount; // now from the source array we are caught up to where the variable ended
             copy_index = copy_index + amount;
@@ -144,7 +149,6 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
     }
 
     std.debug.print("new value: {s}\n", .{new_buffer});
-
 }
 pub fn copyJustText(self: *EnvValue, new_buffer: []u8, copy_index: u8, buffer_index: u8, amount: u8) void {
     const copy_end = copy_index + amount;
