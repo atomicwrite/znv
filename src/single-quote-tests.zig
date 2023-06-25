@@ -3,26 +3,28 @@ const EnvValue = @import("env-value.zig").EnvValue;
 const EnvKey = @import("env-key.zig").EnvKey;
 const nextKey = @import("env-reader.zig").nextKey;
 const nextValue = @import("env-reader.zig").nextValue;
-
+const EnvGroup = @import("env-group.zig").EnvGroup;
+const freePairs = @import("env-reader.zig").freePairs;
+const preInitPairs = @import("env-reader.zig").preInitPairs;
+const nextPair = @import("env-reader.zig").nextPair;
 const testing = std.testing;
 
 test "simple single quoted key value" {
     const file =
         try std.fs.cwd().openFile("test-files/sample-single-quote.env", .{});
     defer file.close();
-    //todo: use allocation. but this is ok for now.
-    var key = [_]u8{0} ** 32768;
-    var value = [_]u8{0} ** 32768; //still learning. want to create a big buffer for max size
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+    var group: EnvGroup = EnvGroup{};
+    group.init(&allocator);
+    var buffer = try allocator.alloc(u8, 100);
+    defer allocator.free(buffer);
 
-    var envKey = EnvKey{ .key = &key };
-    var envValue = EnvValue{ .value = &value };
+    try preInitPairs(&group, 1, buffer);
+    defer freePairs(&group);
 
-    nextKey(file.reader(), &envKey) catch |x| {
-        return x;
-    };
-    nextValue(file.reader(), &envValue) catch |x| {
-        return x;
-    };
-    std.debug.print("Output:  {s}={s} \n", .{ envKey.key, envValue.value });
-    try std.testing.expect(std.mem.eql(u8, envValue.value[0..4], "beta"));
+    try nextPair(file.reader(), &group.pairs[0]);
+    std.debug.print("Output:  {s}={s} \n", .{ group.pairs[0].key.key, group.pairs[0].value.value });
+    try std.testing.expect(std.mem.eql(u8, group.pairs[0].value.value[0..4], "beta"));
 }
