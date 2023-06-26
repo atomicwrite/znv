@@ -27,7 +27,7 @@ pub const EnvValue = struct {
     didOverFlow: bool = false,
     backSlashStreak: u8 = 0,
     singleQuoteStreak: u8 = 0,
-    doubleQuoteStreak : u8= 0,
+    doubleQuoteStreak: u8 = 0,
 
     pub fn free_value(self: *EnvValue) void {
         self.allocator.free(self.value);
@@ -85,21 +85,25 @@ pub const EnvValue = struct {
             //we've told the user they overflowed. Just return; Nothing else can be processed.
             return true;
         }
-
+        std.debug.print("Looking for quotes or braces... \n", .{});
         switch (value) {
             '"' => {
                 self.doubleQuoteStreak = self.doubleQuoteStreak + 1;
+                std.debug.print("Found a double quote {} \n", .{self.doubleQuoteStreak});
                 return false;
             },
             '\'' => {
                 self.singleQuoteStreak = self.singleQuoteStreak + 1;
+                std.debug.print("Found a single quote {} \n", .{self.singleQuoteStreak});
                 return false;
             },
             '\\' => {
                 self.backSlashStreak = self.backSlashStreak + 1;
+                std.debug.print("Found a backslash quote {} \n", .{self.backSlashStreak});
                 return false;
             },
             '}' => {
+                std.debug.print("Found a Close Brace \n", .{});
                 if (!self.isParsingVariable) {
                     const count = self.previousIsDollarSign();
                     if (count != 0) {
@@ -108,19 +112,20 @@ pub const EnvValue = struct {
                 }
             },
             '{' => {
+                std.debug.print("Found a Open Brace \n", .{});
                 if (self.isParsingVariable) {
                     decrementInterpolDepth(self);
                 }
             },
-            '\n' => {
-                std.debug.print("Newline hit on double/no quote\n", .{});
-                return true;
-            },
+
             '\r' => {
                 return false;
             },
-            else => {},
+            else =>{
+
+            }
         }
+        std.debug.print("Looking for newlines and if quoted \n", .{});
         if (!self.quoted) {
             //quick note, we know that it's not any of the following characters because of the switch.
             //you check for when it's no longer a \\ streak or "" streak to determine the length of it.
@@ -139,6 +144,15 @@ pub const EnvValue = struct {
         }
         if (self.singleQuoteStreak > 0) {
             if (walkSingleQuotes(self)) {
+                return true;
+            }
+        }
+        if (value == '\n') {
+            std.debug.print("Found a new line \n", .{});
+            if (!self.tripleQuoted and !self.tripleDoubleQuoted) {
+
+                    std.debug.print("Newline hit on double/no quote\n", .{});
+
                 return true;
             }
         }

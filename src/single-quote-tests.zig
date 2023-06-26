@@ -7,6 +7,8 @@ const EnvGroup = @import("env-group.zig").EnvGroup;
 const freePairs = @import("env-reader.zig").freePairs;
 const preInitPairs = @import("env-reader.zig").preInitPairs;
 const nextPair = @import("env-reader.zig").nextPair;
+const InterpolationHelper = @import("interpolation-helper.zig");
+const interpolate_value = InterpolationHelper.interpolate_value;
 const testing = std.testing;
 
 test "simple single quoted key value" {
@@ -29,4 +31,27 @@ test "simple single quoted key value" {
     try std.testing.expect(std.mem.eql(u8, group.pairs[0].value.value[0..4], "beta"));
 }
 
+
+test "Read a single quoted heredoc that has interpolation and new lines in it" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+    var group: EnvGroup = EnvGroup{};
+    group.init(&allocator);
+    var buffer = try allocator.alloc(u8, 100);
+    defer allocator.free(buffer);
+
+    try preInitPairs(&group, 3, buffer);
+    defer freePairs(&group);
+
+    const file =
+        try std.fs.cwd().openFile("test-files/sample-interpolated-single-quote-heredoc-2.env", .{});
+    const reader = file.reader();
+    defer file.close();
+    try nextPair(reader, &group.pairs[0]);
+    var firstOne = group.values[0];
+    try interpolate_value(&firstOne, group.pairs);
+    std.debug.print("Output:  {s}={s} \n", .{ group.pairs[0].key.key, group.pairs[0].value.value });
+    try std.testing.expect(std.mem.eql(u8, group.pairs[0].value.value, "\n\n${beta}\n\n"));
+}
 

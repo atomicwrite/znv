@@ -35,11 +35,11 @@ fn check_if_pair_needs_interpolation( pairs: []EnvPair, pair: *const EnvPair) !v
     //todo: error mode allows to raise error or silently ignore that we had circular
 
 }
-fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
-    var tmp: u8 = self.interpolationIndex;
+fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i32 {
+    var tmp: u32 = self.interpolationIndex;
 
     std.debug.print("We have {} variables\n", .{tmp});
-    var resizeNeeded: i8 = 0;
+    var resizeNeeded: i32 = 0;
     while (tmp > 0) : (tmp = tmp - 1) {
         std.debug.print("Looking at variable {} \n", .{tmp - 1});
         const item = &self.interpolations[tmp - 1];
@@ -62,7 +62,7 @@ fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i8 {
                 continue;
             };
             //this is the one
-            const pairValueLen = @intCast(i8, pair.value.value.len);
+            const pairValueLen = @intCast(i32, pair.value.value.len);
             std.debug.print("found {s}  at {} with length {} to replace old length {} \n", .{ targetKey, pair.value.value.len, pairValueLen, length });
 
             if (length > pairValueLen) {
@@ -124,21 +124,21 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
         };
 
         std.debug.print("Copying in value {s}\n", .{envpair.value.value});
-        const value_len = @intCast(u8, envpair.value.value.len);
-        const copy_end: u8 = copy_index + value_len;
+        const value_len = @intCast(u32, envpair.value.value.len);
+        const copy_end: u32 = copy_index + value_len;
         std.debug.print("Copying after variable {}->{}\n", .{ copy_end, copy_index });
         std.mem.copy(u8, new_buffer[copy_index..copy_end], envpair.value.value);
         copy_index = copy_end;
         buffer_index = item.endBrace;
         std.debug.print("Copy End: {}, Copy Index: {}, Buffer Index: {} \n", .{ copy_end, copy_index, buffer_index });
         //zig, because for loops are while
-        var amount: u8 = 0;
+        var amount: u32 = 0;
         //do we have another variable or is this the last?
         if (tmp < self.interpolationIndex - 1) {
             amount = self.interpolations[tmp + 1].dollarSign - buffer_index;
             std.debug.print("Copying {} to next variable \n", .{amount});
         } else {
-            amount = @intCast(u8, self.value.len) - buffer_index;
+            amount = @intCast(u32, self.value.len) - buffer_index;
             std.debug.print("Copying {} to end \n", .{amount});
         }
         if (amount > 0) {
@@ -150,7 +150,7 @@ fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair
 
     std.debug.print("new value: {s}\n", .{new_buffer});
 }
-pub fn copyJustText(self: *EnvValue, new_buffer: []u8, copy_index: u8, buffer_index: u8, amount: u8) void {
+pub fn copyJustText(self: *EnvValue, new_buffer: []u8, copy_index: u32, buffer_index: u32, amount: u32) void {
     const copy_end = copy_index + amount;
     const buffer_end = buffer_index + amount;
     var newBufferSlice = new_buffer[copy_index..copy_end];
