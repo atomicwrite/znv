@@ -65,8 +65,12 @@ pub fn nextKey(
             else => |e| return e,
         };
         const isLastKeyValue = key.processKeyNextValue(byte) catch |err| switch (err) {
-            error.InvalidKeyCharacter => break,
+            error.InvalidKeyCharacter => {
+                std.debug.print("Invalid Character :  {c}   \n", .{byte});
+                return err;
+            },
             error.KeyStartedWithNumber => break,
+            else => |e| return e,
         };
         std.debug.print("Is Last? :  {any}   \n", .{isLastKeyValue});
         if (isLastKeyValue) {

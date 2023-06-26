@@ -1,4 +1,6 @@
 const std = @import("std");
+const isDigit = std.ascii.isDigit;
+const isAlphabetic = std.ascii.isAlphabetic;
 pub const EnvKeyError = error{
     KeyStartedWithNumber,
     InvalidKeyCharacter,
@@ -7,7 +9,7 @@ pub const EnvKeyError = error{
 pub const EnvKey = struct {
     const Self = @This();
     key: []u8 = undefined,
-    keyIndex: u8 = 0,
+    keyIndex: u32 = 0,
     allocator: *std.mem.Allocator = undefined,
 
     pub fn init(self: *Self, allocator: *std.mem.Allocator, tmp_buffer: []u8) !void {
@@ -46,20 +48,19 @@ pub const EnvKey = struct {
             self.placeKeyCharacter(value);
             return false;
         }
-        if (value < 'A') {
-            return EnvKeyError.InvalidKeyCharacter;
-        }
-        if (value <= 'z') {
+        if(isAlphabetic(value)){
             self.placeKeyCharacter(value);
             return false;
         }
-        if (value <= '9') {
-            if (self.keyIndex != 0) { //can't start with a number
-                self.placeKeyCharacter(value);
-                return false;
-            }
-            return EnvKeyError.KeyStartedWithNumber;
+
+        if(isDigit(value)){
+        if (self.keyIndex != 0) { //can't start with a number
+                    self.placeKeyCharacter(value);
+                    return false;
+                }
+                return EnvKeyError.KeyStartedWithNumber;
         }
+
         return error.InvalidKeyCharacter;
     }
 };

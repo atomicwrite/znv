@@ -5,68 +5,80 @@ const nextKey = @import("env-reader.zig").nextKey;
 const nextValue = @import("env-reader.zig").nextValue;
 const EnvPair = @import("env-pair.zig").EnvPair;
 const InterpolationHelper = @import("interpolation-helper.zig");
+const EnvGroup = @import("env-group.zig").EnvGroup;
+const freePairs = @import("env-reader.zig").freePairs;
+const preInitPairs = @import("env-reader.zig").preInitPairs;
+const nextPair = @import("env-reader.zig").nextPair;
 const free_interpolation_array = InterpolationHelper.free_interpolation_array;
 const interpolate_value = InterpolationHelper.interpolate_value;
 const testing = std.testing;
 
 test "read two pairs and interpolate one" {
+    const file =
+        try std.fs.cwd().openFile("test-files/sample-double-quote-heredoc.env", .{});
+    defer file.close();
+
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
-    var allocator = &arena.allocator(); // prob best with arena but for tests...
-    const file =
-        try std.fs.cwd().openFile("test-files/sample-interpolated.env", .{});
-    defer file.close();
-    //   //todo: use allocation. but this is ok for now.
-    //
-    var key = try allocator.alloc(u8, 100); //buffer for repeat reads
-    defer allocator.free(key);
-    var value = try allocator.alloc(u8, 100); //buffer for repeat reads
-    defer allocator.free(value);
-    var envKey1 = EnvKey{};
-    try envKey1.init(allocator, key);
-    var envValue1 = EnvValue{};
-    try envValue1.init(allocator, value);
-    defer free_interpolation_array(&envValue1);
-    //
-    const envPair1 = EnvPair{ .key = &envKey1, .value = &envValue1 };
-    std.debug.print("Reading key  \n", .{});
-    try nextKey(file.reader(), &envKey1);
-    std.debug.print("Reading Value  \n", .{});
-    try nextValue(file.reader(), &envValue1);
-    std.debug.print("Read   \n", .{});
-    try envKey1.finalize_key();
+    var allocator = arena.allocator();
+    var group: EnvGroup = EnvGroup{};
+    group.init(&allocator);
+    var buffer = try allocator.alloc(u8, 100);
+    defer allocator.free(buffer);
 
-    defer envKey1.free_key();
-    try envValue1.finalize_value();
-    std.debug.print("Read key {s} \n", .{envKey1.key});
-    std.debug.print("Read Value {s} \n", .{envValue1.value});
-    defer envValue1.free_value();
+    try preInitPairs(&group, 1, buffer);
+    defer freePairs(&group);
 
-    var envKey2 = EnvKey{};
-    try envKey2.init(allocator, key);
-    var envValue2 = EnvValue{};
-    try envValue2.init(allocator, value);
-    defer free_interpolation_array(&envValue2);
-    //
-    const envPair2 = EnvPair{ .key = &envKey2, .value = &envValue2 };
-    std.debug.print("Reading key  \n", .{});
-    try nextKey(file.reader(), &envKey2);
-
-    try nextValue(file.reader(), &envValue2);
-    std.debug.print("Read   \n", .{});
-    try envKey2.finalize_key();
-    defer envKey2.free_key();
-    try envValue2.finalize_value();
-    defer envValue2.free_value();
-    std.debug.print("Read key {s} \n", .{envKey2.key});
-    std.debug.print("Read Value {s} \n", .{envValue2.value});
-
-    const items: []EnvPair = try allocator.alloc(EnvPair, 2);
-    items[0] = envPair2;
-    items[1] = envPair1;
-    defer allocator.free(items);
-    try interpolate_value(&envValue2, items);
+    try nextPair(file.reader(), &group.pairs[0]);
+    std.debug.print("Output:  {s}={s} \n", .{ group.pairs[0].key.key, group.pairs[0].value.value });
+    try std.testing.expect(std.mem.eql(u8, group.pairs[0].value.value[0..4], "beta"));
+    try interpolate_value(group.pairs[0].value, group.pairs);
     //   std.debug.print("Output:  {s}={s} \n", .{ envKey2.key.*, envValue2.value.* });
     //   try std.testing.expect(std.mem.eql(u8, envValue2.value.*[0..4], "beta"));
 }
 
+test "Read a single quoted string that has interpolation in it" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+    var group: EnvGroup = EnvGroup{};
+    group.init(&allocator);
+    var buffer = try allocator.alloc(u8, 100);
+    defer allocator.free(buffer);
+
+    try preInitPairs(&group, 3, buffer);
+    defer freePairs(&group);
+
+    const file =
+        try std.fs.cwd().openFile("test-files/sample-interpolated-single-quote.env", .{});
+    const reader = file.reader();
+    defer file.close();
+    try nextPair(reader, &group.pairs[0]);
+    var firstOne = group.values[0];
+    try interpolate_value(&firstOne, group.pairs);
+    std.debug.print("Output:  {s}={s} \n", .{ group.pairs[0].key.key, group.pairs[0].value.value });
+    try std.testing.expect(std.mem.eql(u8, group.pairs[0].value.value[0..7], "${beta}"));
+}
+
+test "Read a single quoted heredoc that has interpolation in it" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+    var group: EnvGroup = EnvGroup{};
+    group.init(&allocator);
+    var buffer = try allocator.alloc(u8, 100);
+    defer allocator.free(buffer);
+
+    try preInitPairs(&group, 3, buffer);
+    defer freePairs(&group);
+
+    const file =
+        try std.fs.cwd().openFile("test-files/sample-interpolated-single-quote-heredoc.env", .{});
+    const reader = file.reader();
+    defer file.close();
+    try nextPair(reader, &group.pairs[0]);
+    var firstOne = group.values[0];
+    try interpolate_value(&firstOne, group.pairs);
+    std.debug.print("Output:  {s}={s} \n", .{ group.pairs[0].key.key, group.pairs[0].value.value });
+    try std.testing.expect(std.mem.eql(u8, group.pairs[0].value.value[0..7], "${beta}"));
+}

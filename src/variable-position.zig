@@ -1,7 +1,7 @@
 pub const VariablePosition = struct {
-    variableStart: u8,
-    variableEnd:u8=undefined,
-    dollarSign:u8,
-    endBrace: u8 = undefined,
-    startBrace: u8 = undefined,
+    variableStart: u32,
+    variableEnd:u32=undefined,
+    dollarSign:u32,
+    endBrace: u32 = undefined,
+    startBrace: u32 = undefined,
 };

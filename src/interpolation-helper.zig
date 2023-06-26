@@ -102,8 +102,8 @@ pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
 }
 fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair) !void {
     var tmp: u8 = 0;
-    var copy_index: u8 = 0;
-    var buffer_index: u8 = 0;
+    var copy_index: u32 = 0;
+    var buffer_index: u32 = 0;
 
     while (tmp < self.interpolationIndex) : (tmp = tmp + 1) {
         const item = &self.interpolations[tmp];

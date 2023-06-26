@@ -9,7 +9,7 @@ pub const EnvGroup = struct {
     pairs:[]EnvPair = undefined,
     keys:[]EnvKey = undefined,
     values:[]EnvValue = undefined,
-    groupIndex : u8 = 0,
+    groupIndex : u32 = 0,
     allocator:*std.mem.Allocator = undefined,
     pub fn init(self:*EnvGroup, allocator :*std.mem.Allocator) void {
     self.allocator = allocator;
