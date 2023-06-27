@@ -40,7 +40,9 @@ pub fn build(b: *std.build.Builder) void {
     interpolation_tests4.setBuildMode(mode);
     test_step.dependOn(&interpolation_tests4.step);
 
-
+    const edge_cases = b.addTest("src/edge-cases-test.zig");
+    edge_cases.setBuildMode(mode);
+    test_step.dependOn(&edge_cases.step);
 
 
 }

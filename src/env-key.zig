@@ -56,8 +56,9 @@ pub const EnvKey = struct {
 
         if(isDigit(value)){ //decided to allow it to start with numbers. IF you use export 2blah=wha then it's on you to avoid bash errors.
             self.placeKeyCharacter(value);
+            return false;
         }
-
+        std.debug.print("Invalid key character {c} \n", .{value});
         return error.InvalidKeyCharacter;
     }
 };
