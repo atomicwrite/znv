@@ -80,9 +80,12 @@ fn get_size_for_interpolation(self: *EnvValue, pairs: []EnvPair) i32 {
 }
 pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
     if (!self.hadInterpolation()) {
+          std.debug.print("Env pair did not have interpolation \n", .{ });
+
         return;
     }
     if (self.isAlreadyInterpolated) {
+        std.debug.print("Env pair is already interpolated \n", .{ });
         return;
     }
     std.debug.print("----------------------  \n", .{});
@@ -157,7 +160,7 @@ pub fn copyJustText(self: *EnvValue, new_buffer: []u8, copy_index: u32, buffer_i
     const oldBufferSlice = self.value[buffer_index..buffer_end];
     std.mem.copy(u8, newBufferSlice, oldBufferSlice);
 }
-pub fn incrementInterpolDepth(self: *EnvValue, count: u8) !void {
+pub fn incrementInterpolDepth(self: *EnvValue, count: u32) !void {
     if (self.interpolationIndex >= self.interpolations.len) {
         std.debug.print("resizing variable array \n", .{});
         try resizeInterpolationArray(self);
@@ -167,7 +170,7 @@ pub fn incrementInterpolDepth(self: *EnvValue, count: u8) !void {
         .variableStart = self.valueIndex + 1,
         .startBrace = self.valueIndex,
 
-        .dollarSign = self.valueIndex - count,
+        .dollarSign = self.valueIndex - @intCast(u32,count),
     };
     std.debug.print("interpolation starts at {}, dollar sign at {} :{}\n", .{ self.valueIndex + 1, self.valueIndex - count, self.interpolationIndex });
 }

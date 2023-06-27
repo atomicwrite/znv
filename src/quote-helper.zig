@@ -58,13 +58,13 @@ pub fn walkSingleQuotes(self: *EnvValue) bool {
 }
 pub fn walkDoubleQuotes(self: *EnvValue) bool {
         if (self.doubleQuoted) {
-            std.debug.print("Ending single quote found\n", .{});
+            std.debug.print("Ending double quote found\n", .{});
             return true; // we have a single unescaped quote ending a quoted string at the start
 
         }
         const quotesStartAtStartOfString = self.valueIndex == 0;
-        std.debug.print("Quote(s) is at start? {} - {} {} \n", .{self.valueIndex,self.singleQuoteStreak, quotesStartAtStartOfString});
-        switch (self.singleQuoteStreak) {
+        std.debug.print("double Quote(s) is at start? {} - {} {} \n", .{self.valueIndex,self.singleQuoteStreak, quotesStartAtStartOfString});
+        switch (self.doubleQuoteStreak) {
             1 => {
                 if (quotesStartAtStartOfString) {
                     self.doubleQuoted = true;
@@ -74,14 +74,14 @@ pub fn walkDoubleQuotes(self: *EnvValue) bool {
                 return false;
             },
             3 => {
-                if (self.doubleQuoted) {
+                if (self.tripleDoubleQuoted) {
                     self.doubleQuoteStreak = 0;
                     std.debug.print("ending double-heredoc \n", .{});
                     return true; // we have the end of a triple quoted here doc
                 }
                 if (quotesStartAtStartOfString) {
                  std.debug.print("starting double-heredoc \n", .{});
-                    self.doubleQuoted = true;
+                    self.tripleDoubleQuoted = true;
 
                 }
                 self.doubleQuoteStreak = 0;

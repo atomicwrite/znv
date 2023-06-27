@@ -40,6 +40,7 @@ pub const EnvKey = struct {
     }
     pub fn processKeyNextValue(self: *Self, value: u8) !bool {
         if (value == '=') {
+            std.debug.print("End of key found (=) \n", .{});
             //we hit the end
 
             return true;
@@ -53,12 +54,8 @@ pub const EnvKey = struct {
             return false;
         }
 
-        if(isDigit(value)){
-        if (self.keyIndex != 0) { //can't start with a number
-                    self.placeKeyCharacter(value);
-                    return false;
-                }
-                return EnvKeyError.KeyStartedWithNumber;
+        if(isDigit(value)){ //decided to allow it to start with numbers. IF you use export 2blah=wha then it's on you to avoid bash errors.
+            self.placeKeyCharacter(value);
         }
 
         return error.InvalidKeyCharacter;

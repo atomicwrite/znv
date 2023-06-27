@@ -69,7 +69,7 @@ pub fn nextKey(
                 std.debug.print("Invalid Character :  {c}   \n", .{byte});
                 return err;
             },
-            error.KeyStartedWithNumber => break,
+
             else => |e| return e,
         };
         std.debug.print("Is Last? :  {any}   \n", .{isLastKeyValue});

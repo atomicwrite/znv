@@ -102,17 +102,18 @@ pub const EnvValue = struct {
                 std.debug.print("Found a backslash quote {} \n", .{self.backSlashStreak});
                 return false;
             },
-            '}' => {
-                std.debug.print("Found a Close Brace \n", .{});
-                if (!self.isParsingVariable) {
-                    const count = self.previousIsDollarSign();
-                    if (count != 0) {
-                        try incrementInterpolDepth(self, count);
-                    }
-                }
-            },
             '{' => {
                 std.debug.print("Found a Open Brace \n", .{});
+                if (!self.isParsingVariable) {
+                    const optional_count = self.previousIsDollarSign();
+                    if(optional_count) |count| {
+                        try incrementInterpolDepth(self, count);
+                    }
+
+                }
+            },
+            '}' => {
+                std.debug.print("Found a close Brace \n", .{});
                 if (self.isParsingVariable) {
                     decrementInterpolDepth(self);
                 }
@@ -149,7 +150,7 @@ pub const EnvValue = struct {
         }
         if (value == '\n') {
             std.debug.print("Found a new line \n", .{});
-            if (!self.tripleQuoted and !self.tripleDoubleQuoted) {
+            if (!self.isHereDoc()) {
 
                     std.debug.print("Newline hit on double/no quote\n", .{});
 
@@ -159,6 +160,9 @@ pub const EnvValue = struct {
 
         try self.placeValueCharacter(value);
         return false;
+    }
+    pub fn isHereDoc(self: *Self) bool {
+        return self.tripleQuoted or self.tripleDoubleQuoted;
     }
 
     pub fn fourCharactersAgoNewline(self: *Self) bool {
@@ -204,12 +208,12 @@ pub const EnvValue = struct {
         return self.valueIndex == 3;
     }
     // checks for $ being behind the { and ignoring whitespace
-    pub fn previousIsDollarSign(self: *Self) u8 {
+    pub fn previousIsDollarSign(self: *Self) ?u32 {
         if (self.valueIndex == 0) {
-            return 0;
+            return null;
         }
         var tmp = self.valueIndex - 1;
-        var count: u8 = 0;
+        var count: u32 = 0;
         while (tmp >= 0) : (tmp = tmp - 1) {
             count = count + 1;
 
@@ -219,7 +223,7 @@ pub const EnvValue = struct {
             if (self.value[tmp] == ' ') {
                 continue;
             }
-            return 0;
+            return null;
         }
         return count;
     }
