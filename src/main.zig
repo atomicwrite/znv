@@ -36,6 +36,7 @@ test "simple key value" {
     var envValue = EnvValue{ .value = &value };
 
     nextKey(file.reader(), &envKey) catch |x| {
+
         return x;
     };
     nextValue(file.reader(), &envValue) catch |x| {

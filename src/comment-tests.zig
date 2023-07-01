@@ -13,12 +13,12 @@ const free_interpolation_array = InterpolationHelper.free_interpolation_array;
 const interpolate_value = InterpolationHelper.interpolate_value;
 const testing = std.testing;
 
-test "read two pairs and interpolate one that is a here doc" {
+test "read two pairs and interpolate one" {
     const file =
-        try std.fs.cwd().openFile("test-files/sample-interpolated-heredoc-3.env", .{});
+        try std.fs.cwd().openFile("test-files/sample-interpolated.env", .{});
     defer file.close();
- const reader = file.reader();
- var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     var allocator = arena.allocator();
     var group: EnvGroup = EnvGroup{};
@@ -26,16 +26,18 @@ test "read two pairs and interpolate one that is a here doc" {
     var buffer = try allocator.alloc(u8, 100);
     defer allocator.free(buffer);
 
-    try preInitPairs(&group, 2,buffer);
+    try preInitPairs(&group, 2, buffer);
     defer freePairs(&group);
 
-    defer file.close();
-    var tmp : u32 = 0;
-    while(tmp < 2) : (tmp = tmp + 1){
-        try nextPair(reader,&group.pairs[tmp]);
-    }
-    var firstOne = group.values[1];
-    try interpolate_value(&firstOne, group.pairs);
+    try nextPair(file.reader(), &group.pairs[0]);
+        try nextPair(file.reader(), &group.pairs[1]);
+    std.debug.print("Output:  {s}={s} \n", .{ group.pairs[0].key.key, group.pairs[0].value.value });
     std.debug.print("Output:  {s}={s} \n", .{ group.pairs[1].key.key, group.pairs[1].value.value });
-    try std.testing.expect(std.mem.eql(u8, group.pairs[1].value.value, "beta"));
+    try interpolate_value(group.pairs[1].value, group.pairs);
+    std.debug.print("Interpolated Output:  {s}={s} \n", .{ group.pairs[1].key.key, group.pairs[1].value.value });
+        try std.testing.expect(std.mem.eql(u8, group.pairs[1].value.value, "beta"));
+    //   std.debug.print("Output:  {s}={s} \n", .{ envKey2.key.*, envValue2.value.* });
+    //   try std.testing.expect(std.mem.eql(u8, envValue2.value.*[0..4], "beta"));
 }
+
+

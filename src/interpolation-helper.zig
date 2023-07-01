@@ -104,7 +104,7 @@ pub fn interpolate_value(self: *EnvValue, pairs: []EnvPair) !void {
     self.isBeingInterpolated = false;
 }
 fn copy_interpolation_values(self: *EnvValue, new_buffer: []u8, pairs: []EnvPair) !void {
-    var tmp: u8 = 0;
+    var tmp: u32 = 0;
     var copy_index: u32 = 0;
     var buffer_index: u32 = 0;
 
@@ -195,8 +195,8 @@ pub fn decrementInterpolDepth(self: *EnvValue) void {
     std.debug.print("interpolation starts at {} ends at {} with variable starts at {} and ends at {} \"{s}\" and we have {} variables now\n", .{ interpolation.dollarSign, interpolation.endBrace, interpolation.variableStart, interpolation.variableEnd, self.value[interpolation.variableStart..interpolation.variableEnd], self.interpolationIndex });
 }
 
-pub fn getWhiteSpaceOffsetLeft(str: []u8) u8 {
-    var tmp: u8 = 0;
+pub fn getWhiteSpaceOffsetLeft(str: []u8) u32 {
+    var tmp: u32 = 0;
     while (tmp <= str.len) : (tmp = tmp + 1) {
         if (str[tmp] != ' ') {
             break;
@@ -204,9 +204,9 @@ pub fn getWhiteSpaceOffsetLeft(str: []u8) u8 {
     }
     return tmp;
 }
-pub fn getWhiteSpaceOffsetRight(str: []u8) u8 {
+pub fn getWhiteSpaceOffsetRight(str: []u8) u32 {
     var tmp = str.len;
-    var count: u8 = 0;
+    var count: u32 = 0;
     while (tmp <= 0) : (tmp = tmp - 1) {
         if (str[tmp] != ' ') {
             break;

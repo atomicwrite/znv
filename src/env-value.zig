@@ -25,9 +25,9 @@ pub const EnvValue = struct {
     isAlreadyInterpolated: bool = false,
     isBeingInterpolated: bool = false,
     didOverFlow: bool = false,
-    backSlashStreak: u8 = 0,
-    singleQuoteStreak: u8 = 0,
-    doubleQuoteStreak: u8 = 0,
+    backSlashStreak: u32 = 0,
+    singleQuoteStreak: u32 = 0,
+    doubleQuoteStreak: u32 = 0,
 
     pub fn free_value(self: *EnvValue) void {
         self.allocator.free(self.value);
@@ -171,9 +171,9 @@ pub const EnvValue = struct {
         }
         return self.value[self.valueIndex - 4] == '\n';
     }
-    pub fn previousSingleQuoteCount(self: *Self) u8 {
+    pub fn previousSingleQuoteCount(self: *Self) u32 {
         var tmp = self.valueIndex;
-        var count: u8 = 0;
+        var count: u32 = 0;
         while (tmp > 0) {
             if (self.value[tmp - 1] == '\'') {
                 count = count + 1;
@@ -186,9 +186,9 @@ pub const EnvValue = struct {
         }
         return count;
     }
-    pub fn previousDoubleQuoteCount(self: *Self) u8 {
+    pub fn previousDoubleQuoteCount(self: *Self) u32 {
         var tmp = self.valueIndex;
-        var count: u8 = 0;
+        var count: u32 = 0;
         while (tmp > 0) {
             if (self.value[tmp - 1] == '"') {
                 count = count + 1;
